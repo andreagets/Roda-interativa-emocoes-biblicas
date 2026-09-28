@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roda das Emoções Bíblicas — Interativa</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/basecoat-css@1.0.2/dist/basecoat.cdn.min.css">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --accent: #2563eb;
+      --accent-contrast: #ffffff;
+      --accent-text: color-mix(in srgb, var(--accent) 72%, #000);
+      --bg: #f8f9fb;
+      --surface: #ffffff;
+      --text: #14171f;
+      --text-muted: #5b6472;
+      --border: rgba(20, 23, 31, 0.10);
+      --radius: 10px;
+      --shadow: 0 1px 3px rgba(20, 23, 31, 0.08);
+      --space: 16px;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:where(:not([data-theme="light"])) {
+        --accent-text: color-mix(in srgb, var(--accent) 78%, #fff);
+        --bg: #101318;
+        --surface: #181c23;
+        --text: #eef1f6;
+        --text-muted: #9aa4b2;
+        --border: rgba(238, 241, 246, 0.12);
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .page-wrapper {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 2.5rem;
+      width: 100%;
+      box-sizing: border-box;
+      flex: 1;
+    }
+    header.hero-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .hero-header h1 {
+      font-size: 1.85rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 0.5rem 0;
+      letter-spacing: -0.02em;
+    }
+    .hero-header p {
+      font-size: 1rem;
+      color: #64748b;
+      margin: 0;
+      max-width: 680px;
+      margin-inline: auto;
+    }
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+      align-items: start;
+    }
+    @media (min-width: 960px) {
+      .main-layout {
+        grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
+        gap: 2.5rem;
+      }
+    }
+    /* Contêiner da Roda */
+    .wheel-card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 1.25rem;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
+      border: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+    .wheel-viewport {
+      position: relative;
+      width: 100%;
+      max-width: 620px;
+      aspect-ratio: 1 / 1;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    .wheel-svg-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    /* Setores e interatividade SVG */
+    .slice-interactive {
+      cursor: pointer;
+      outline: none;
+      transition: opacity 0.15s ease, filter 0.15s ease;
+    }
+    .slice-interactive:hover,
+    .slice-interactive:focus-visible {
+      opacity: 0.92 !important;
+      filter: brightness(1.06) drop-shadow(0 2px 6px rgba(0,0,0,0.25));
+    }
+    .slice-interactive:focus-visible {
+      stroke: #0f172a !important;
+      stroke-width: 3.5px !important;
+    }
+    .slice-interactive.is-selected {
+      filter: drop-shadow(0 0 10px rgba(15, 23, 42, 0.4)) brightness(1.04);
+      stroke: #0f172a !important;
+      stroke-width: 3px !important;
+    }
+
+    /* Rótulos de texto no SVG com maior visibilidade */
+    .wheel-text {
+      font-family: var(--font-sans);
+      pointer-events: none;
+      user-select: none;
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+    .wheel-text-sub {
+      font-size: 10.5px;
+      font-weight: 600;
+      fill: #1e293b;
+      letter-spacing: 0.2px;
+    }
+    .wheel-text-main {
+      font-size: 14px;
+      font-weight: 700;
+      fill: #0f172a;
+      letter-spacing: 0.6px;
+    }
+
+    /* Cartão de Leitura */
+    .verse-card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 1.75rem;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
+      border: 1px solid #e2e8f0;
+      position: sticky;
+      top: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      min-height: 380px;
+    }
+    .verse-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+      gap: 0.5rem;
+    }
+    .category-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+    }
+    .btn-reset {
+      border: none;
+      background: #f1f5f9;
+      color: #64748b;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      line-height: 1;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-reset:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+    .btn-reset:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .verse-emotion-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 0.5rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .verse-reference {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #1e3a8a;
+      margin-bottom: 1.25rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .verse-body {
+      font-size: 1.15rem;
+      line-height: 1.68;
+      color: #334155;
+      font-style: italic;
+      background: #f8fafc;
+      padding: 1.25rem 1.4rem;
+      border-radius: 12px;
+      border-left: 4px solid #cbd5e1;
+      margin-top: 0.25rem;
+      flex-grow: 1;
+      display: flex;
+      align-items: center;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      flex-grow: 1;
+      color: #64748b;
+      padding: 2.5rem 1rem;
+    }
+    .empty-state-icon {
+      width: 56px;
+      height: 56px;
+      background: #f1f5f9;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      color: #94a3b8;
+    }
+
+    /* Tooltip flutuante */
+    .wheel-tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: rgba(15, 23, 42, 0.95);
+      color: #ffffff;
+      padding: 0.45rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+      transform: translate(-50%, -120%);
+      opacity: 0;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      white-space: nowrap;
+      z-index: 100;
+    }
+    .wheel-tooltip.visible {
+      opacity: 1;
+    }
+
+    /* Legenda de Setores */
+    .legend-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 1.25rem;
+      width: 100%;
+    }
+    .legend-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: #ffffff;
+      padding: 0.3rem 0.75rem;
+      border-radius: 9999px;
+      border: 1px solid #e2e8f0;
+      cursor: pointer;
+      transition: transform 0.1s ease, border-color 0.1s ease;
+    }
+    .legend-chip:hover {
+      border-color: #94a3b8;
+      transform: translateY(-1px);
+    }
+    .legend-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+    }
+
+    footer.app-footer {
+      border-top: 1px solid #e2e8f0;
+      background: #ffffff;
+      padding: 1.5rem 1rem;
+      margin-top: auto;
+      text-align: center;
+      font-size: 0.85rem;
+      color: #64748b;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-wrapper">
+    <header class="hero-header">
+      <h1>Roda das Emoções Bíblicas</h1>
+      <p>Versão interativa — clique ou passe o mouse em qualquer emoção para explorar os versículos bíblicos</p>
+    </header>
+
+    <div class="main-layout">
+      <!-- Painel Esquerdo: Roda Interativa -->
+      <section class="wheel-card" aria-label="Visualizador da Roda das Emoções">
+        <div class="wheel-viewport" id="wheelContainer">
+          <svg id="wheelSvg" class="wheel-svg-layer" viewBox="0 0 1000 1000" role="img" aria-label="Roda interativa dividida em 6 setores de emoções bíblicas">
+            <defs>
+              <filter id="shadowFilter" x="-15%" y="-15%" width="130%" height="130%">
+                <feDropShadow dx="0" dy="3" stdDeviation="4" flood-opacity="0.15"/>
+              </filter>
+            </defs>
+            <g id="layerBackground"></g>
+            <g id="layerSlices"></g>
+            <g id="layerDividers"></g>
+            <g id="layerLabels"></g>
+            <g id="layerCenter"></g>
+          </svg>
+          <div id="wheelTooltip" class="wheel-tooltip" role="tooltip"></div>
+        </div>
+
+        <!-- Atalhos pelos 6 grupos principais -->
+        <div class="legend-bar" id="legendContainer" aria-label="Filtro de setores"></div>
+      </section>
+
+      <!-- Painel Direito: Cartão de Leitura Bíblica -->
+      <aside class="verse-card" id="verseCard" aria-live="polite">
+        <div class="verse-card-header">
+          <span class="category-badge" id="cardSectorBadge">SELECIONE UMA EMOÇÃO</span>
+          <button type="button" class="btn-reset" id="btnResetCard" title="Limpar seleção" aria-label="Limpar texto selecionado">✕</button>
+        </div>
+
+        <div id="cardContentInitial" class="empty-state">
+          <div class="empty-state-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+            </svg>
+          </div>
+          <h2 style="font-size:1.15rem; color:#1e293b; margin:0 0 0.5rem 0; font-weight:600;">Explore a Palavra</h2>
+          <p style="margin:0; max-width:320px; font-size:0.925rem; line-height:1.5;">Clique em um sentimento ou emoção da roda para ler o texto bíblico correspondente.</p>
+        </div>
+
+        <div id="cardContentActive" style="display: none; flex-direction: column; flex-grow: 1;">
+          <h2 class="verse-emotion-title" id="cardEmotionTitle">CALMO</h2>
+          <div class="verse-reference" id="cardReference">Salmos 46:10</div>
+          <div class="verse-body" id="cardVerseText">
+            "Aquietai-vos e sabei que eu sou Deus; serei exaltado entre as nações; serei exaltado sobre a Terra."
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    Baseada na Roda dos Sentimentos de Gloria Willcox (1982) · Adaptação bíblica em português · Prof.ª Andréa Soares Rocha da Silva — UFC · Uso educacional
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      /* =========================================================
+         1. CONSTANTES GEOMÉTRICAS
+         Eliminação da faixa externa: agora a roda é composta por:
+         - Centro (ícone)
+         - Anel interno (Emoções Primárias: 22% a 54%)
+         - Anel externo expandido (Sentimentos: 54% a 98%)
+      ========================================================= */
+      const GEO = {
+        cx: 500,
+        cy: 500,
+        R: 490, 
+        rCenterIcon: 0.22,  // Centro
+        rInnerMin:   0.22,  // 22% início do anel EMOÇÕES
+        rInnerMax:   0.54,  // 54% término EMOÇÕES / início SENTIMENTOS
+        rOuterMax:   0.98,  // 98% limite da roda (Sentimentos)
+        angleOffset: 0
+      };
+
+      /* =========================================================
+         2. BASE DE DADOS DOS 6 SETORES E ITENS
+      ========================================================= */
+      const SECTORS_DATA = [
+        {
+          id: 'calmo',
+          name: 'CALMO',
+          colorCore: '#BAE6FD',      // Azul base
+          colorSentiments: '#E0F2FE',// Variação suave sentimentos
+          accentText: '#0369a1',
+          borderCol: '#7dd3fc',
+          primary: {
+            label: 'CALMO',
+            ref: 'Salmos 46:10',
+            text: 'Aquietai-vos e sabei que eu sou Deus; serei exaltado entre as nações; serei exaltado sobre a Terra.'
+          },
+          subItems: [
+            { label: 'ATENCIOSO', ref: 'Filipenses 4:8', text: 'Tudo o que é verdadeiro, tudo o que é honesto, tudo o que é justo, tudo o que é puro, tudo o que é amável, tudo o que é de boa fama — é isso que deveis pensar.' },
+            { label: 'AMOROSO', ref: '1 Coríntios 13:4-7', text: 'O amor é sofredor, é benigno; o amor não é invejoso; não trata com leviandade, não se ensoberbece. Tudo sofre, tudo crê, tudo espera, tudo suporta.' },
+            { label: 'GRATO', ref: '1 Tessalonicenses 5:18', text: 'Em tudo dai graças, porque esta é a vontade de Deus em Cristo Jesus para convosco.' },
+            { label: 'CONFIANTE', ref: 'Provérbios 3:5', text: 'Confia no Senhor de todo o teu coração e não te estribes no teu próprio entendimento.' },
+            { label: 'PACÍFICO', ref: 'João 16:33', text: 'No mundo tereis aflições, mas tende bom ânimo; eu venci o mundo.' }
+          ]
+        },
+        {
+          id: 'medo',
+          name: 'COM MEDO',
+          colorCore: '#DDD6FE',      // Roxo suave
+          colorSentiments: '#EDE9FE',
+          accentText: '#6d28d9',
+          borderCol: '#c4b5fd',
+          primary: {
+            label: 'COM MEDO',
+            ref: 'Isaías 41:10',
+            text: 'Não temas, porque eu sou contigo; não te assombres, porque eu sou o teu Deus; eu te fortaleço, eu te ajudo.'
+          },
+          subItems: [
+            { label: 'ANSIOSO', ref: 'Filipenses 4:6-7', text: 'Não estejais inquietos por coisa alguma; antes, as vossas petições sejam conhecidas diante de Deus, pela oração e súplicas, com ação de graças; e a paz de Deus guardará os vossos corações.' },
+            { label: 'INSEGURO', ref: 'Isaías 12:2', text: 'Eis que Deus é a minha salvação; confiarei e não temerei, porque o Senhor é a minha força.' },
+            { label: 'IMPOTENTE', ref: 'Filipenses 4:13', text: 'Posso todas as coisas naquele que me fortalece.' },
+            { label: 'REJEITADO', ref: 'Salmos 27:10', text: 'Quando meu pai e minha mãe me desampararem, o Senhor me recolherá.' },
+            { label: 'CONFUSO', ref: '1 Coríntios 14:33', text: 'Porque Deus não é o Deus de confusão, senão de paz.' }
+          ]
+        },
+        {
+          id: 'bravo',
+          name: 'BRAVO',
+          colorCore: '#FECACA',      // Vermelho suave
+          colorSentiments: '#FEE2E2',
+          accentText: '#b91c1c',
+          borderCol: '#fca5a5',
+          primary: {
+            label: 'BRAVO',
+            ref: 'Efésios 4:31',
+            text: 'Toda amargura, e ira, e cólera, e gritaria, e blasfêmia sejam desviadas de vós, com toda a malícia.'
+          },
+          subItems: [
+            { label: 'CRÍTICO', ref: 'Colossenses 3:12-14', text: 'Revesti-vos de entranhada misericórdia, de benignidade, humildade, mansidão e longanimidade; sobre tudo isto, revesti-vos de amor, que é o vínculo da perfeição.' },
+            { label: 'FRUSTRADO', ref: 'Gálatas 6:9', text: 'E não nos cansemos de fazer o bem, porque a seu tempo ceifaremos, se não houvermos desfalecido.' },
+            { label: 'IRRITADO', ref: 'Provérbios 15:1', text: 'A resposta branda desvia o furor, mas a palavra áspera excita a ira.' },
+            { label: 'AMARGO', ref: 'Hebreus 12:14-15', text: 'Segui a paz com todos... e não haja em algum de vós raiz de amargura, brotando algum impedimento.' },
+            { label: 'CIÚMES', ref: 'Êxodo 20:17', text: 'Não cobiçarás a casa do teu próximo, nem coisa alguma do teu próximo.' }
+          ]
+        },
+        {
+          id: 'feliz',
+          name: 'FELIZ',
+          colorCore: '#FED7AA',      // Laranja suave
+          colorSentiments: '#FFEDD5',
+          accentText: '#c2410c',
+          borderCol: '#fdba74',
+          primary: {
+            label: 'FELIZ',
+            ref: '1 Tessalonicenses 5:16-18',
+            text: 'Regozijai-vos sempre. Orai sem cessar. Em tudo dai graças.'
+          },
+          subItems: [
+            { label: 'ALEGRE', ref: 'Salmos 32:11', text: 'Alegrai-vos no Senhor e regozijai-vos, justos; e exultai, todos vós que retos sois de coração.' },
+            { label: 'ESPERANÇOSO', ref: 'Jeremias 29:11', text: 'Eu bem sei os pensamentos que tenho a vosso respeito, pensamentos de paz e não de mal, para vos dar o fim que esperais.' },
+            { label: 'CRIATIVO', ref: 'Êxodo 35:31-32', text: 'E o encheu do Espírito de Deus, de sabedoria, de entendimento e de conhecimento, em todo artifício, para inventar desenhos e trabalhar em toda a obra engenhosa.' },
+            { label: 'INSPIRADO', ref: 'Salmos 139:14', text: 'Eu te louvarei, porque de um modo assombroso e maravilhoso fui formado; maravilhosas são as tuas obras.' },
+            { label: 'ANIMADO', ref: 'Hebreus 10:24-25', text: 'Consideremo-nos uns aos outros, para nos estimularmos ao amor e às boas obras, não deixando a nossa congregação.' }
+          ]
+        },
+        {
+          id: 'forte',
+          name: 'FORTE',
+          colorCore: '#FEF08A',      // Amarelo suave
+          colorSentiments: '#FEF9C3',
+          accentText: '#a16207',
+          borderCol: '#fde047',
+          primary: {
+            label: 'FORTE',
+            ref: '2 Timóteo 4:7',
+            text: 'Combati o bom combate, acabei a carreira, guardei a fé.'
+          },
+          subItems: [
+            { label: 'IMPORTANTE', ref: 'Isaías 43:4', text: 'Aos meus olhos foste de grande valor, foste honrado, e eu te amei.' },
+            { label: 'DIGNO', ref: 'Efésios 2:10', text: 'Somos feitura sua, criados em Cristo Jesus para as boas obras, as quais Deus preparou para que andássemos nelas.' },
+            { label: 'SEM MEDO', ref: '2 Timóteo 1:7', text: 'Deus não nos deu o espírito de temor, mas de fortaleza, e de amor, e de moderação.' },
+            { label: 'RESPEITADO', ref: 'Tito 2:7', text: 'Em tudo te dá um exemplo de boas obras; na doutrina, mostra integridade e gravidade.' },
+            { label: 'ORGULHOSO', ref: 'Mateus 25:21', text: 'Bem, bom servo e fiel; sobre o pouco foste fiel, sobre muito te colocarei; entra no gozo do teu senhor.' }
+          ]
+        },
+        {
+          id: 'triste',
+          name: 'TRISTE',
+          colorCore: '#BBF7D0',      // Verde suave
+          colorSentiments: '#DCFCE7',
+          accentText: '#15803d',
+          borderCol: '#86efac',
+          primary: {
+            label: 'TRISTE',
+            ref: 'Isaías 40:31',
+            text: 'Os que esperam no Senhor renovarão as suas forças e subirão com asas como águias; correrão e não se cansarão.'
+          },
+          subItems: [
+            { label: 'SOLITÁRIO', ref: 'Salmos 25:16-17', text: 'Volva-te para mim e tem misericórdia de mim, pois estou desolado; as angústias do meu coração se têm multiplicado; tira-me dos meus apertos.' },
+            { label: 'DEPRIMIDO', ref: 'Salmos 34:17-18', text: 'Perto está o Senhor dos que têm o quebrantado coração e salva os contritos de espírito.' },
+            { label: 'ENTEDIADO', ref: 'Efésios 5:15-17', text: 'Andai prudentemente, não como néscios, mas como sábios, remindo o tempo, porquanto os dias são maus; entendei qual seja a vontade do Senhor.' },
+            { label: 'ENVERGONHADO', ref: 'Salmos 31:1', text: 'Em ti, Senhor, me refugio; nunca seja eu envergonhado; livra-me na tua justiça.' },
+            { label: 'CANSADO', ref: 'Mateus 11:28-30', text: 'Vinde a mim, todos os que estais cansados e oprimidos, e eu vos aliviarei; o meu jugo é suave e o meu fardo é leve.' }
+          ]
+        }
+      ];
+
+      /* =========================================================
+         3. UTILITÁRIOS TRIGONOMÉTRICOS PARA SVG
+      ========================================================= */
+      function polarToCartesian(cx, cy, r, angleDeg) {
+        const rad = (angleDeg - 90) * Math.PI / 180.0;
+        return {
+          x: cx + (r * Math.cos(rad)),
+          y: cy + (r * Math.sin(rad))
+        };
+      }
+
+      function describeArcPath(cx, cy, rIn, rOut, startAngle, endAngle) {
+        const p1 = polarToCartesian(cx, cy, rOut, startAngle);
+        const p2 = polarToCartesian(cx, cy, rOut, endAngle);
+        const p3 = polarToCartesian(cx, cy, rIn, endAngle);
+        const p4 = polarToCartesian(cx, cy, rIn, startAngle);
+        const largeArcFlag = (endAngle - startAngle) <= 180 ? '0' : '1';
+
+        return [
+          'M', p1.x, p1.y,
+          'A', rOut, rOut, 0, largeArcFlag, 1, p2.x, p2.y,
+          'L', p3.x, p3.y,
+          'A', rIn, rIn, 0, largeArcFlag, 0, p4.x, p4.y,
+          'Z'
+        ].join(' ');
+      }
+
+      /* =========================================================
+         4. GERAÇÃO DINÂMICA DA RODA NO SVG (SEM A TRILHA EXTERNA)
+      ========================================================= */
+      const layerSlices = document.getElementById('layerSlices');
+      const layerLabels = document.getElementById('layerLabels');
+      const layerCenter = document.getElementById('layerCenter');
+      const tooltipEl = document.getElementById('wheelTooltip');
+      const containerEl = document.getElementById('wheelContainer');
+      const legendEl = document.getElementById('legendContainer');
+
+      const rCenter = GEO.R * GEO.rCenterIcon;
+      const rInnerStart = GEO.R * GEO.rInnerMin;
+      const rInnerEnd   = GEO.R * GEO.rInnerMax;
+      const rOuterEnd   = GEO.R * GEO.rOuterMax;
+
+      let currentSelectedSlice = null;
+
+      // Legenda inferior
+      SECTORS_DATA.forEach(sec => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'legend-chip';
+        chip.innerHTML = `<span class="legend-dot" style="background:${sec.colorCore}; border:1px solid ${sec.borderCol};"></span> ${sec.name}`;
+        chip.addEventListener('click', () => {
+          showVerse(sec.primary.label, sec.name, sec.primary.ref, sec.primary.text, sec.accentText, sec.colorCore);
+          highlightSelectedById(`slice-${sec.id}-core`);
+        });
+        legendEl.appendChild(chip);
+      });
+
+      // Renderização dos 6 setores
+      SECTORS_DATA.forEach((sec, sectorIdx) => {
+        const sectorStartAngle = GEO.angleOffset + (sectorIdx * 60);
+        const sectorEndAngle   = sectorStartAngle + 60;
+        const sectorMidAngle   = sectorStartAngle + 30;
+
+        // -----------------------------------------------------
+        // A) Anel Externo: SENTIMENTOS (54% a 98%, fatias clicáveis com fonte maior)
+        // -----------------------------------------------------
+        sec.subItems.forEach((sub, subIdx) => {
+          const subStart = sectorStartAngle + (subIdx * 12);
+          const subEnd   = subStart + 12;
+          const subMid   = subStart + 6;
+          const sliceId  = `slice-${sec.id}-sub-${subIdx}`;
+
+          const pathSentiment = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          pathSentiment.setAttribute('d', describeArcPath(GEO.cx, GEO.cy, rInnerEnd, rOuterEnd, subStart, subEnd));
+          pathSentiment.setAttribute('fill', sec.colorSentiments);
+          pathSentiment.setAttribute('stroke', '#ffffff');
+          pathSentiment.setAttribute('stroke-width', '2');
+          pathSentiment.setAttribute('class', 'slice-interactive');
+          pathSentiment.setAttribute('id', sliceId);
+          pathSentiment.setAttribute('role', 'button');
+          pathSentiment.setAttribute('tabindex', '0');
+          pathSentiment.setAttribute('aria-label', `${sub.label}, sentimento de ${sec.name}. Referência: ${sub.ref}`);
+
+          attachInteraction(pathSentiment, {
+            label: sub.label,
+            sector: sec.name,
+            ref: sub.ref,
+            text: sub.text,
+            accent: sec.accentText,
+            colorCore: sec.colorCore
+          });
+
+          layerSlices.appendChild(pathSentiment);
+
+          // Texto do sentimento (ampliado para 10.5px e posicionado com equilíbrio)
+          const subPos = polarToCartesian(GEO.cx, GEO.cy, (rInnerEnd + rOuterEnd) / 2, subMid);
+          const textSub = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          textSub.setAttribute('x', subPos.x);
+          textSub.setAttribute('y', subPos.y);
+          textSub.setAttribute('class', 'wheel-text wheel-text-sub');
+
+          let rotSub = subMid - 90;
+          if (subMid > 90 && subMid < 270) {
+            rotSub += 180;
+          }
+          textSub.setAttribute('transform', `rotate(${rotSub}, ${subPos.x}, ${subPos.y})`);
+          textSub.textContent = sub.label;
+          layerLabels.appendChild(textSub);
+        });
+
+        // -----------------------------------------------------
+        // B) Anel Interno: EMOÇÃO PRINCIPAL (22% a 54%, 1 fatia de 60°)
+        // -----------------------------------------------------
+        const coreSliceId = `slice-${sec.id}-core`;
+        const pathCore = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        pathCore.setAttribute('d', describeArcPath(GEO.cx, GEO.cy, rInnerStart, rInnerEnd, sectorStartAngle, sectorEndAngle));
+        pathCore.setAttribute('fill', sec.colorCore);
+        pathCore.setAttribute('stroke', '#ffffff');
+        pathCore.setAttribute('stroke-width', '2.5');
+        pathCore.setAttribute('class', 'slice-interactive');
+        pathCore.setAttribute('id', coreSliceId);
+        pathCore.setAttribute('role', 'button');
+        pathCore.setAttribute('tabindex', '0');
+        pathCore.setAttribute('aria-label', `Emoção central: ${sec.name}. Referência: ${sec.primary.ref}`);
+
+        attachInteraction(pathCore, {
+          label: sec.primary.label,
+          sector: sec.name,
+          ref: sec.primary.ref,
+          text: sec.primary.text,
+          accent: sec.accentText,
+          colorCore: sec.colorCore
+        });
+
+        layerSlices.appendChild(pathCore);
+
+        // Texto da emoção central (ampliado para 14px em negrito)
+        const corePos = polarToCartesian(GEO.cx, GEO.cy, (rInnerStart + rInnerEnd) / 2, sectorMidAngle);
+        const textCore = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        textCore.setAttribute('x', corePos.x);
+        textCore.setAttribute('y', corePos.y);
+        textCore.setAttribute('class', 'wheel-text wheel-text-main');
+
+        let rotCore = sectorMidAngle - 90;
+        if (sectorMidAngle > 90 && sectorMidAngle < 270) {
+          rotCore += 180;
+        }
+        textCore.setAttribute('transform', `rotate(${rotCore}, ${corePos.x}, ${corePos.y})`);
+        textCore.textContent = sec.name;
+        layerLabels.appendChild(textCore);
+      });
+
+      // -----------------------------------------------------
+      // C) Centro da Roda: Ícone da Bíblia Sagrada
+      // -----------------------------------------------------
+      const centerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      centerCircle.setAttribute('cx', GEO.cx);
+      centerCircle.setAttribute('cy', GEO.cy);
+      centerCircle.setAttribute('r', rCenter);
+      centerCircle.setAttribute('fill', '#ffffff');
+      centerCircle.setAttribute('stroke', '#cbd5e1');
+      centerCircle.setAttribute('stroke-width', '3');
+      centerCircle.setAttribute('filter', 'url(#shadowFilter)');
+      layerCenter.appendChild(centerCircle);
+
+      const gBible = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      gBible.setAttribute('transform', `translate(${GEO.cx - 28}, ${GEO.cy - 28}) scale(2.3)`);
+      gBible.setAttribute('fill', 'none');
+      gBible.setAttribute('stroke', '#0f172a');
+      gBible.setAttribute('stroke-width', '1.5');
+      gBible.setAttribute('stroke-linecap', 'round');
+      gBible.setAttribute('stroke-linejoin', 'round');
+      gBible.innerHTML = `
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" fill="#f8fafc"/>
+        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" fill="#f8fafc"/>
+        <path d="M12 7v13" stroke="#64748b"/>
+        <path d="M12 9v4" stroke="#e11d48" stroke-width="1.8"/>
+        <path d="M10.2 10.5h3.6" stroke="#e11d48" stroke-width="1.8"/>
+      `;
+      layerCenter.appendChild(gBible);
+
+      /* =========================================================
+         5. INTERAÇÕES E TOOLTIP
+      ========================================================= */
+      function attachInteraction(element, data) {
+        element.addEventListener('mouseenter', (e) => {
+          showTooltip(e, `${data.label} · ${data.ref}`);
+        });
+
+        element.addEventListener('mousemove', (e) => {
+          positionTooltip(e);
+        });
+
+        element.addEventListener('mouseleave', () => {
+          hideTooltip();
+        });
+
+        element.addEventListener('click', () => {
+          triggerSelect(element, data);
+        });
+
+        element.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            triggerSelect(element, data);
+          }
+        });
+      }
+
+      function triggerSelect(element, data) {
+        if (currentSelectedSlice) {
+          currentSelectedSlice.classList.remove('is-selected');
+        }
+        element.classList.add('is-selected');
+        currentSelectedSlice = element;
+        showVerse(data.label, data.sector, data.ref, data.text, data.accent, data.colorCore);
+      }
+
+      function highlightSelectedById(id) {
+        const el = document.getElementById(id);
+        if (el) {
+          if (currentSelectedSlice) currentSelectedSlice.classList.remove('is-selected');
+          el.classList.add('is-selected');
+          currentSelectedSlice = el;
+        }
+      }
+
+      function showTooltip(evt, text) {
+        tooltipEl.textContent = text;
+        tooltipEl.classList.add('visible');
+        positionTooltip(evt);
+      }
+
+      function positionTooltip(evt) {
+        const bounds = containerEl.getBoundingClientRect();
+        const x = evt.clientX - bounds.left;
+        const y = evt.clientY - bounds.top;
+        tooltipEl.style.left = `${x}px`;
+        tooltipEl.style.top = `${y - 12}px`;
+      }
+
+      function hideTooltip() {
+        tooltipEl.classList.remove('visible');
+      }
+
+      /* =========================================================
+         6. ATUALIZAÇÃO DO CARTÃO LATERAL
+      ========================================================= */
+      const cardSectorBadge = document.getElementById('cardSectorBadge');
+      const cardEmotionTitle = document.getElementById('cardEmotionTitle');
+      const cardReference = document.getElementById('cardReference');
+      const cardVerseText = document.getElementById('cardVerseText');
+      const cardInitial = document.getElementById('cardContentInitial');
+      const cardActive = document.getElementById('cardContentActive');
+      const btnReset = document.getElementById('btnResetCard');
+
+      function showVerse(label, sectorName, ref, text, accentColor, sectorBg) {
+        cardInitial.style.display = 'none';
+        cardActive.style.display = 'flex';
+
+        cardSectorBadge.textContent = sectorName;
+        cardSectorBadge.style.backgroundColor = sectorBg;
+        cardSectorBadge.style.color = '#0f172a';
+        cardSectorBadge.style.borderColor = accentColor;
+
+        cardEmotionTitle.textContent = label;
+        cardReference.textContent = ref;
+        cardReference.style.color = accentColor;
+        cardVerseText.textContent = `“${text}”`;
+        cardVerseText.style.borderLeftColor = accentColor;
+      }
+
+      function resetCard() {
+        if (currentSelectedSlice) {
+          currentSelectedSlice.classList.remove('is-selected');
+          currentSelectedSlice = null;
+        }
+        cardActive.style.display = 'none';
+        cardInitial.style.display = 'flex';
+        cardSectorBadge.textContent = 'SELECIONE UMA EMOÇÃO';
+        cardSectorBadge.style.backgroundColor = '#f1f5f9';
+        cardSectorBadge.style.color = '#334155';
+        cardSectorBadge.style.borderColor = 'transparent';
+      }
+
+      btnReset.addEventListener('click', resetCard);
+    });
+  </script>
+</body>
+</html>
